@@ -3,104 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mocha Resto Café | سجل بياناتك</title>
+    <title>Mocha Resto Café</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.0/vanilla-tilt.min.js"></script>
     <style>
-        /* التنسيق اللوني بناءً على شعار موكا المرفق */
-        body { background-color: #5D1F3C; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .mocha-accent { background-color: #D5D6D8; color: #5D1F3C; }
+        :root {
+            --mocha-burgundy: #900B4D;
+            --mocha-cream: #EAE7DD;
+        }
+
+        body { 
+            background-color: var(--mocha-burgundy); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .coffee-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: radial-gradient(circle, #b12c6a 0%, #900B4D 70%);
+            opacity: 0.8;
+        }
+        .coffee-smoke {
+            position: absolute; width: 200%; height: 200%; top: -50%; left: -50%;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="blur"><feGaussianBlur in="SourceGraphic" stdDeviation="5"/></filter><ellipse cx="100" cy="100" rx="80" ry="60" fill="%23fff" fill-opacity="0.02" filter="url(%23blur)"/></svg>');
+            animation: smoke 60s linear infinite;
+        }
+        @keyframes smoke { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .glass { 
+            background: rgba(255, 255, 255, 0.08); 
+            backdrop-filter: blur(25px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            transform-style: preserve-3d;
+        }
+
+        .mocha-btn { 
+            background-color: var(--mocha-cream); 
+            color: var(--mocha-burgundy); 
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .mocha-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 20%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: rotate(30deg);
+            animation: shimmer 4s infinite;
+        }
+        @keyframes shimmer {
+            0% { left: -60%; }
+            15% { left: 120%; }
+            100% { left: 120%; }
+        }
+
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+        .error-shake { animation: shake 0.2s ease-in-out 0s 2; border-color: #ff4d4d !important; }
+        
+        #overlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(144, 11, 77, 0.97); z-index: 9999; 
+            align-items: center; justify-content: center; flex-direction: column;
+            backdrop-filter: blur(15px);
+        }
+
+        .confetti {
+            position: absolute; width: 10px; height: 10px; opacity: 0;
+            animation: confetti-fall 4s ease-out forwards;
+        }
+        @keyframes confetti-fall {
+            0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+        }
+        @keyframes progress { from { width: 0%; } to { width: 100%; } }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4 text-white">
+<body class="p-3 text-white">
 
-    <div class="glass max-w-md w-full rounded-3xl p-8 shadow-2xl">
-        <div class="text-center mb-8">
-            <h1 class="text-5xl font-black tracking-tighter text-[#D5D6D8] uppercase">MOCHA</h1>
-            <p class="text-slate-300 mt-2">Resto Café | انضم إلينا ☕</p>
+    <div class="coffee-bg"><div class="coffee-smoke"></div></div>
+
+    <div id="overlay">
+        <div id="loaderDisplay" class="flex flex-col items-center px-6">
+            <div class="relative mb-8">
+                <div class="animate-spin rounded-full h-20 w-20 border-b-2 border-t-2 border-white/20"></div>
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl">✨</div>
+            </div>
+            <h2 class="text-white font-light text-2xl text-center leading-relaxed">
+                ثوانٍ.. وتكتمل رحلتك<br>
+                <span class="font-black tracking-widest text-mocha-cream uppercase">في عالم موكا</span>
+            </h2>
+            <div class="mt-6 flex gap-1">
+                <div class="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div class="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:-0.5s]"></div>
+            </div>
+        </div>
+        <div id="successDisplay" class="hidden w-full max-w-xs p-6"></div>
+    </div>
+
+    <div class="glass max-w-sm w-full rounded-[2.2rem] p-7 shadow-2xl relative" data-tilt data-tilt-max="5" data-tilt-glare data-tilt-max-glare="0.1">
+        <input type="text" id="fax_number" style="display:none">
+
+        <div class="flex justify-center mb-4" style="transform: translateZ(30px)">
+            <svg id="mainLogo" class="w-24 h-auto drop-shadow-md" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="46" stroke="#EAE7DD" stroke-width="1.5" opacity="0.3"/>
+                <circle cx="50" cy="50" r="41.5" stroke="#EAE7DD" stroke-width="1.5"/>
+                <text x="50" y="58" font-family="Segoe UI" font-weight="900" font-size="20" fill="#EAE7DD" text-anchor="middle">mocha</text>
+                <text x="50" y="68" font-family="Segoe UI" font-size="6" fill="#EAE7DD" text-anchor="middle" letter-spacing="1.5">Resto Café</text>
+            </svg>
         </div>
 
-        <div class="space-y-5">
+        <div class="text-center mb-5 border-b border-white/10 pb-4">
+            <h1 class="text-2xl font-black text-white tracking-widest uppercase">MOCHA</h1>
+            <p class="text-white/80 text-sm mt-1 italic font-medium">انضم لعائلتنا 🎁</p>
+        </div>
+
+        <div class="space-y-4" style="transform: translateZ(15px)">
             <div>
-                <label class="block text-sm mb-2 text-slate-300 text-right">الاسم الكامل</label>
-                <input type="text" id="name" placeholder="أدخل اسمك..." 
-                    class="w-full bg-[#3a1426] border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-[#D5D6D8] transition-all">
+                <label class="block text-sm mb-1.5 mr-1 text-white/70 font-bold uppercase tracking-wide">الاسم الكامل</label>
+                <input type="text" id="name" placeholder="أدخل اسمك الكريم" 
+                    class="w-full bg-black/15 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white text-base text-white transition-all">
+            </div>
+            
+            <div>
+                <label class="block text-sm mb-1.5 mr-1 text-white/70 font-bold uppercase tracking-wide">رقم الهاتف</label>
+                <input type="tel" id="phone" placeholder="05xxxxxxxx" maxlength="10" 
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    class="w-full bg-black/15 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white text-left font-mono text-base tracking-[0.15em]" dir="ltr">
+                <p id="phoneError" class="text-red-300 text-[10px] mt-1 hidden font-bold">❌ 10 أرقام تبدأ بـ 05</p>
             </div>
 
             <div>
-                <label class="block text-sm mb-2 text-slate-300 text-right">رقم الهاتف</label>
-                <input type="tel" id="phone" placeholder="059xxxxxxx" 
-                    class="w-full bg-[#3a1426] border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-[#D5D6D8] transition-all text-left" dir="ltr">
-            </div>
-
-            <div>
-                <label class="block text-sm mb-2 text-slate-300 text-right">تاريخ الميلاد</label>
+                <label class="block text-sm mb-1.5 mr-1 text-white/70 font-bold uppercase tracking-wide">تاريخ الميلاد</label>
                 <input type="date" id="dob" 
-                    class="w-full bg-[#3a1426] border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-[#D5D6D8] transition-all">
+                    class="w-full bg-black/15 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white text-white/70 text-base">
             </div>
 
-            <button onclick="saveData()" id="submitBtn"
-                class="w-full mocha-accent font-bold py-4 rounded-xl shadow-lg transform active:scale-95 transition-all text-lg">
-                انضم لعائلة Mocha 🎁
+            <button onclick="secureSave(this)" id="submitBtn" 
+                class="w-full mocha-btn font-black py-4 rounded-xl shadow-lg active:scale-95 text-xl mt-3 uppercase tracking-tight">
+                انضم الآن ✨
             </button>
-        </div>
 
-        <div id="successMsg" class="hidden mt-6 text-center text-[#D5D6D8] font-bold animate-pulse">
-            تم تسجيلك بنجاح! ننتظرك في Mocha.
+            <p class="text-center text-white/50 text-[10px] tracking-wide mt-2">
+                * انضم لـ <span id="memberCount" class="font-bold text-white/70">7986</span> عضواً متميزاً حتى الآن
+            </p>
         </div>
     </div>
 
     <script>
-    async function saveData() {
-        const name = document.getElementById('name').value;
-        const phone = document.getElementById('phone').value;
-        const dob = document.getElementById('dob').value;
-        const btn = document.getElementById('submitBtn');
+        function triggerHaptic() {
+            if (window.navigator && window.navigator.vibrate) { window.navigator.vibrate([50, 30, 50]); }
+        }
 
-        if(name && phone && dob) {
-            btn.innerText = "جاري الحفظ... ☕";
+        function updateMemberCount() {
+            const countSpan = document.getElementById('memberCount');
+            let currentCount = parseInt(countSpan.textContent);
+            countSpan.textContent = currentCount + Math.floor(Math.random() * 2) + 1;
+            setTimeout(updateMemberCount, 8000);
+        }
+        updateMemberCount();
+
+        function launchConfetti() {
+            for (let i = 0; i < 80; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = ['#fff', '#EAE7DD', '#FFD700'][Math.floor(Math.random() * 3)];
+                confetti.style.width = Math.random() * 8 + 4 + 'px';
+                confetti.style.height = confetti.style.width;
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        async function secureSave(btn) {
+            const phoneInput = document.getElementById('phone');
+            const dobInput = document.getElementById('dob');
+            const nameInput = document.getElementById('name');
+            const val = { name: nameInput.value.trim(), phone: phoneInput.value.trim(), dob: dobInput.value };
+
+            if(!val.name || val.phone.length !== 10 || !val.phone.startsWith('05') || !val.dob) {
+                phoneInput.classList.add('error-shake');
+                document.getElementById('phoneError').classList.remove('hidden');
+                triggerHaptic();
+                return;
+            }
+
             btn.disabled = true;
+            document.getElementById('overlay').style.display = 'flex';
 
             try {
-                // استخدام الرابط الخاص بك من SheetDB
                 const response = await fetch('https://sheetdb.io/api/v1/00uxk32jqdk1u', {
                     method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        data: [
-                            {
-                                'name': name,
-                                'phone': phone,
-                                'dob': dob,
-                                'date': new Date().toLocaleString()
-                            }
-                        ]
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: [{ ...val, date: new Date().toLocaleString('ar-EG') }] })
                 });
 
-                const result = await response.json();
-                
-                if(result.created === 1) {
-                    document.getElementById('successMsg').classList.remove('hidden');
-                    alert("أهلاً بك في Mocha يا " + name + "! تم تسجيلك بنجاح.");
-                    document.getElementById('name').value = '';
-                    document.getElementById('phone').value = '';
-                    document.getElementById('dob').value = '';
+                if (response.ok) {
+                    localStorage.setItem('mocha_user', JSON.stringify(val));
+                    document.getElementById('loaderDisplay').classList.add('hidden');
+                    launchConfetti();
+                    document.getElementById('successDisplay').innerHTML = `
+                        <div class="text-center p-8 glass rounded-[2.2rem] shadow-2xl animate-[popIn_0.5s_ease-out]">
+                            <div class="text-6xl mb-5">🎉</div>
+                            <h2 class="text-white text-3xl font-black mb-3 uppercase tracking-tighter">أهلاً بك!</h2>
+                            <p class="text-white/80 text-lg mb-7 font-medium italic">سعداء بانضمامك يا ${val.name.split(' ')[0]}</p>
+                            <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden"><div class="bg-white h-full animate-[progress_4s_linear]"></div></div>
+                        </div>
+                    `;
+                    document.getElementById('successDisplay').classList.remove('hidden');
+                    setTimeout(() => { window.location.href = 'https://mocha.ps/en'; }, 4200);
                 }
-            } catch (error) {
-                console.error("Error:", error);
-                alert("حدث خطأ في الاتصال. تأكد من إعدادات SheetDB.");
-            } finally {
-                btn.innerText = "انضم لعائلة Mocha 🎁";
+            } catch (e) {
+                document.getElementById('overlay').style.display = 'none';
                 btn.disabled = false;
+                alert("خطأ في الاتصال");
             }
-        } else {
-            alert("يرجى تعبئة جميع الحقول.");
         }
-    }
     </script>
 </body>
 </html>
