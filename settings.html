@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات موكا | Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --mocha-burgundy: #630634; --mocha-cream: #EAE7DD; --gold: #FFD700; }
+        body { background-color: var(--mocha-burgundy); font-family: 'Segoe UI', sans-serif; color: white; min-height: 100vh; padding: 20px; margin: 0; }
+        .coffee-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle, #b12c6a 0%, #630634 70%); }
+        
+        .header-container { position: relative; margin-bottom: 2rem; padding-top: 1rem; }
+        .bg-text-watermark { position: absolute; top: -10px; right: -10px; font-size: 4rem; font-weight: 900; color: rgba(255,255,255,0.03); white-space: nowrap; pointer-events: none; z-index: 0; }
+        .main-title { font-size: 2rem; font-weight: 900; color: var(--mocha-cream); position: relative; z-index: 1; }
+
+        .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 2rem; padding: 1.5rem; position: relative; }
+        
+        .input-field { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 0.75rem; width: 100%; color: white; font-size: 0.8rem; outline: none; transition: 0.3s; }
+        .input-field:focus { border-color: var(--gold); }
+        
+        .save-btn { background: var(--gold); color: var(--mocha-burgundy); font-weight: 900; padding: 1rem; border-radius: 1.25rem; width: 100%; transition: 0.3s; cursor: pointer; border: none; }
+        .save-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+        
+        .label-text { font-size: 10px; color: rgba(255, 255, 255, 0.4); margin-bottom: 5px; display: block; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+    <div class="coffee-bg"></div>
+    <div class="max-w-2xl mx-auto">
+        
+        <header class="header-container text-right">
+            <div class="bg-text-watermark">SETTINGS</div>
+            <h1 class="main-title text-gold">إعدادات النظام</h1>
+            <p class="text-[10px] text-white/40 mt-1">تخصيص كامل وتحكم في الداتابيز</p>
+        </header>
+
+        <div class="space-y-6">
+            <div class="glass-card">
+                <h3 class="text-sm font-black mb-6 border-b border-white/5 pb-3">📱 حساب الإرسال (Firestore)</h3>
+                <div>
+                    <label class="label-text">رقم الواتساب الحالي في الداتابيز</label>
+                    <input type="text" id="senderPhone" class="input-field text-left font-mono text-gold" placeholder="جاري التحميل...">
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h3 class="text-sm font-black mb-6 border-b border-white/5 pb-3">💬 قوالب رسائل الواتساب</h3>
+                <div class="space-y-5">
+                    <div>
+                        <label class="label-text">رسالة الترحيب (WELCOME)</label>
+                        <textarea id="welcomeMsg" class="input-field h-20 text-right" placeholder="أدخل نص الترحيب..."></textarea>
+                    </div>
+                    <div>
+                        <label class="label-text">رسالة طلب التقييم (FEEDBACK)</label>
+                        <textarea id="feedbackMsg" class="input-field h-20 text-right" placeholder="أدخل نص طلب التقييم..."></textarea>
+                    </div>
+                    <div>
+                        <label class="label-text">رسالة التهنئة (BIRTHDAY)</label>
+                        <textarea id="birthdayMsg" class="input-field h-20 text-right" placeholder="أدخل نص التهنئة..."></textarea>
+                    </div>
+                    <div class="bg-gold/5 p-3 rounded-xl border border-gold/10">
+                        <p class="text-[9px] text-gold/70 leading-relaxed italic">
+                            💡 تلميح: استخدم <span class="font-bold">{name}</span> في النص ليتم استبداله باسم الزبون تلقائياً.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h3 class="text-sm font-black mb-6 border-b border-white/5 pb-3">⚙️ خيارات التوجيه الذكي</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-black/20 p-4 rounded-2xl border border-white/5">
+                        <label class="label-text">المقدمة الافتراضية للزبائن</label>
+                        <select id="defaultPrefix" class="input-field bg-transparent border-none p-0 text-gold font-bold">
+                            <option value="970" class="bg-black">970 (فلسطين)</option>
+                            <option value="972" class="bg-black">972 (أخرى)</option>
+                        </select>
+                    </div>
+                    <div class="bg-black/20 p-4 rounded-2xl border border-white/5 flex justify-between items-center">
+                        <div>
+                            <label class="label-text">التوجيه التلقائي</label>
+                            <span class="text-[9px] text-white/30">فحص الشركات ذكياً</span>
+                        </div>
+                        <input type="checkbox" id="autoRoute" class="w-5 h-5 accent-gold" checked>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 pb-10">
+                <button onclick="saveAll()" id="btnSave" class="save-btn shadow-2xl shadow-gold/10">حفظ كافة التغييرات ✨</button>
+                <a href="admin - Copy (3).html" class="text-center text-[10px] text-white/20 hover:text-white transition uppercase font-bold tracking-widest">العودة للوحة الإدارة</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAxGd0JSGNlVMBzPBN5gojbMuLht828OdU",
+            authDomain: "mocha-resto.firebaseapp.com",
+            projectId: "mocha-resto",
+            storageBucket: "mocha-resto.appspot.com",
+            messagingSenderId: "542360253487",
+            appId: "1:542360253487:web:7a8100171966957a069e2b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // جلب البيانات عند التحميل
+        async function loadSettings() {
+            try {
+                // جلب الرقم من Firestore
+                const docRef = doc(db, "settings", "whatsapp");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    document.getElementById('senderPhone').value = docSnap.data().phone || "";
+                }
+
+                // جلب القوالب والخيارات التقنية من LocalStorage
+                document.getElementById('welcomeMsg').value = localStorage.getItem('wa_welcome') || "أهلاً {name}! ✨ نورتنا اليوم في موكا..";
+                document.getElementById('feedbackMsg').value = localStorage.getItem('wa_feedback') || "أهلاً {name}.. رأيك يهمنا، يمكنك تقييمنا هنا: [رابط]";
+                document.getElementById('birthdayMsg').value = localStorage.getItem('wa_birthday') || "كل عام وأنت بخير يا {name}! 🎂 عائلة موكا تتمنى لك سنة سعيدة..";
+                document.getElementById('defaultPrefix').value = localStorage.getItem('wa_prefix') || "970";
+                document.getElementById('autoRoute').checked = localStorage.getItem('wa_auto_route') !== "false";
+            } catch (e) {
+                console.error("Load Error:", e);
+            }
+        }
+
+        // حفظ البيانات
+        window.saveAll = async function() {
+            const btn = document.getElementById('btnSave');
+            btn.innerText = "جاري الحفظ... ⏳";
+            
+            try {
+                // 1. تحديث Firestore
+                const docRef = doc(db, "settings", "whatsapp");
+                await updateDoc(docRef, {
+                    phone: document.getElementById('senderPhone').value,
+                    lastUpdated: serverTimestamp()
+                });
+
+                // 2. تحديث LocalStorage لكل الميزات
+                localStorage.setItem('wa_welcome', document.getElementById('welcomeMsg').value);
+                localStorage.setItem('wa_feedback', document.getElementById('feedbackMsg').value);
+                localStorage.setItem('wa_birthday', document.getElementById('birthdayMsg').value);
+                localStorage.setItem('wa_prefix', document.getElementById('defaultPrefix').value);
+                localStorage.setItem('wa_auto_route', document.getElementById('autoRoute').checked);
+
+                btn.innerText = "✅ تم الحفظ بنجاح!";
+                setTimeout(() => { btn.innerText = "حفظ كافة التغييرات ✨"; }, 2000);
+            } catch (e) {
+                console.error("Save Error:", e);
+                btn.innerText = "فشل الحفظ ❌";
+            }
+        }
+
+        loadSettings();
+    </script>
+</body>
+</html>

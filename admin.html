@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة موكا | Mocha Dashboard</title>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAxGd0JSGNlVMBzPBN5gojbMuLht828OdU",
+            authDomain: "mocha-resto.firebaseapp.com",
+            projectId: "mocha-resto",
+            storageBucket: "mocha-resto.appspot.com",
+            messagingSenderId: "542360253487",
+            appId: "1:542360253487:web:7a8100171966957a069e2b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = "login.html";
+        });
+
+        window.logout = function() {
+            if(confirm("هل أنت متأكد من تسجيل الخروج؟")) {
+                signOut(auth).then(() => {
+                    window.location.href = "login.html";
+                });
+            }
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* التزاماً بطلبك: نفس التصميم الأصلي تماماً بدون أي تغيير بكسل واحد */
+        :root { --mocha-burgundy: #630634; --mocha-cream: #EAE7DD; --gold: #FFD700; }
+        body { background-color: var(--mocha-burgundy); font-family: 'Segoe UI', sans-serif; color: white; min-height: 100vh; padding: 20px; margin: 0; overflow-x: hidden; }
+        .coffee-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle, #b12c6a 0%, #630634 70%); }
+        
+        .header-container { position: relative; margin-bottom: 3rem; padding-top: 1rem; }
+        .bg-text-watermark { position: absolute; top: -10px; right: -10px; font-size: 5rem; font-weight: 900; color: rgba(255,255,255,0.03); white-space: nowrap; pointer-events: none; user-select: none; z-index: 0; }
+        .main-title { font-size: 2.5rem; font-weight: 900; color: var(--mocha-cream); letter-spacing: -1px; line-height: 1; position: relative; z-index: 1; }
+        .sub-brand { display: flex; align-items: center; gap: 10px; margin-top: 0.75rem; color: rgba(255,255,255,0.5); font-size: 0.75rem; letter-spacing: 4px; text-transform: uppercase; font-weight: 300; position: relative; z-index: 1; }
+        .sub-brand::before { content: ""; width: 30px; height: 1px; background: var(--gold); opacity: 0.5; }
+
+        .timer-box { background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .progress-bar-container { width: 100px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 5px; overflow: hidden; }
+        #refreshProgress { height: 100%; background: var(--gold); width: 100%; transition: 0.3s; }
+
+        .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 2rem; padding: 1.25rem; position: relative; transition: 0.3s; overflow: hidden; display: flex; flex-direction: column; height: 100%; }
+        .is-birthday-card { border-color: var(--gold); background: rgba(255, 215, 0, 0.04); }
+        .birthday-ribbon { position: absolute; top: 0; left: 0; background: var(--gold); color: var(--mocha-burgundy); font-size: 10px; font-weight: 900; padding: 4px 14px; border-radius: 0 0 15px 0; }
+
+        .stat-card { background: rgba(0, 0, 0, 0.2); border-radius: 1.5rem; padding: 1.25rem; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .wa-btn { background: #25D366; color: white; padding: 0.65rem; border-radius: 1rem; font-size: 0.8rem; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.3s; margin-top: auto; }
+        .wa-btn-gold { background: var(--gold) !important; color: var(--mocha-burgundy) !important; }
+        .quick-action-btn { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); font-size: 9px; padding: 6px; border-radius: 8px; text-align: center; flex: 1; transition: 0.3s; }
+
+        .chart-bar-bg { background: rgba(255,255,255,0.05); height: 8px; border-radius: 10px; width: 100%; overflow: hidden; margin-top: 4px; }
+        .chart-bar-fill { height: 100%; background: var(--gold); border-radius: 10px; transition: width 1s ease-in-out; width: 0%; }
+
+        .filter-chip { padding: 6px 15px; border-radius: 12px; font-size: 10px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); transition: 0.3s; cursor: pointer; color: rgba(255,255,255,0.5); }
+        .filter-chip.active { background: var(--mocha-cream); color: var(--mocha-burgundy); border-color: var(--mocha-cream); }
+        
+        .view-btn { padding: 6px 15px; font-size: 10px; font-weight: bold; border-radius: 10px; transition: 0.3s; color: rgba(255,255,255,0.4); }
+        .view-btn.active { background: var(--gold); color: var(--mocha-burgundy); }
+
+        .logout-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.6); padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: bold; transition: 0.3s; cursor: pointer; }
+        .visit-badge { background: rgba(255, 215, 0, 0.1); color: var(--gold); padding: 2px 8px; border-radius: 8px; font-size: 9px; font-weight: 900; }
+        .clean-btn { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 12px; font-size: 10px; font-weight: bold; transition: 0.3s; cursor: pointer; }
+        .settings-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 215, 0, 0.2); color: var(--gold); padding: 8px 16px; border-radius: 12px; font-size: 11px; font-weight: bold; transition: 0.3s; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="coffee-bg"></div>
+    <div class="max-w-6xl mx-auto">
+        <header class="header-container flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div class="bg-text-watermark">MOCHA</div>
+            <div>
+                <h1 class="main-title">لوحة التحكم</h1>
+                <div class="sub-brand"><span>موكا ريستو كافيه</span></div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="timer-box flex flex-col items-center md:items-end">
+                    <span id="timerText" class="text-[10px] text-white/50 font-medium italic">تحديث لحظي مفعل ✨</span>
+                    <div class="progress-bar-container"><div id="refreshProgress"></div></div>
+                </div>
+                <a href="settings.html" class="settings-btn">الإعدادات</a>
+                <button onclick="logout()" class="logout-btn">تسجيل الخروج</button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <div class="stat-card flex flex-col justify-around bg-black/30">
+                <div class="mb-4 text-right">
+                    <p class="text-white/30 text-[10px] mb-1 uppercase tracking-widest">إجمالي الزبائن</p>
+                    <h3 id="statTotal" class="text-4xl font-black italic text-gold">0</h3>
+                </div>
+                <div class="flex justify-center gap-4 text-center">
+                    <div><p class="text-gold text-[9px] font-bold">إجمالي الزيارات</p><h4 id="statTotalVisits" class="text-xl font-black">0</h4></div>
+                    <div class="w-[1px] h-10 bg-white/10"></div>
+                    <div><p class="text-pink-400 text-[9px] font-bold">ميلاد اليوم</p><h4 id="statBirthdays" class="text-xl font-black">0</h4></div>
+                    <div class="w-[1px] h-10 bg-white/10"></div>
+                    <div><p class="text-green-400 text-[9px] font-bold">جدد اليوم</p><h4 id="statNewToday" class="text-xl font-black">0</h4></div>
+                </div>
+            </div>
+
+            <div class="stat-card text-right bg-black/30">
+                <h4 class="text-white/40 text-[10px] mb-4 font-bold uppercase tracking-tighter">توزيع الفئات العمرية</h4>
+                <div class="space-y-3">
+                    <div><div class="flex justify-between text-[9px] mb-1"><span>أقل من 20 سنة</span><span id="age1_val">0%</span></div><div class="chart-bar-bg"><div id="age1_bar" class="chart-bar-fill" style="background:#4ade80"></div></div></div>
+                    <div><div class="flex justify-between text-[9px] mb-1"><span>20 - 35 سنة</span><span id="age2_val">0%</span></div><div class="chart-bar-bg"><div id="age2_bar" class="chart-bar-fill" style="background:#fbbf24"></div></div></div>
+                    <div><div class="flex justify-between text-[9px] mb-1"><span>أكبر من 35 سنة</span><span id="age3_val">0%</span></div><div class="chart-bar-bg"><div id="age3_bar" class="chart-bar-fill" style="background:#f87171"></div></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="birthdaySection" class="hidden mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-black text-gold flex items-center gap-3">يوم ميلادهم اليوم 🎂</h2>
+                <button onclick="sendAllBirthdays()" class="bg-gold text-mocha-burgundy text-[11px] px-6 py-2 rounded-full font-black">إرسال تهنئة للجميع 🚀</button>
+            </div>
+            <div id="birthdayGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+        </div>
+
+        <div class="flex flex-col gap-4 mb-6 bg-black/10 p-4 rounded-3xl border border-white/5">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-4 w-full">
+                    <div class="flex bg-white/5 p-1 rounded-xl">
+                        <button id="btnCard" onclick="switchView('card')" class="view-btn active">📦 بطاقات</button>
+                        <button id="btnTable" onclick="switchView('table')" class="view-btn">📄 جدول</button>
+                    </div>
+                    <button onclick="exportToExcel()" class="bg-white/5 hover:bg-white/10 text-gold/70 text-[10px] px-4 py-2.5 rounded-xl border border-white/5 transition italic font-bold">📥 تصدير Excel</button>
+                    <button onclick="cleanDuplicates()" class="clean-btn italic">🧹 تنظيف التكرارات</button>
+                </div>
+                <div class="w-full md:w-80 relative">
+                    <input type="text" id="searchInput" oninput="filterData()" placeholder="ابحث عن اسم أو هاتف..." class="w-full bg-white/5 border border-white/10 px-5 py-3 rounded-2xl text-xs outline-none focus:border-gold transition text-right">
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                <button onclick="applySmartFilter('all')" id="filterAll" class="filter-chip active">الكل</button>
+                <button onclick="applySmartFilter('new')" id="filterNew" class="filter-chip">منضمين اليوم ✨</button>
+                <button onclick="applySmartFilter('bday')" id="filterBday" class="filter-chip">أعياد ميلاد 🎂</button>
+                <button onclick="applySmartFilter('top')" id="filterTop" class="filter-chip">الأكثر زيارة 🔥</button>
+            </div>
+        </div>
+
+        <div id="cardView" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pb-24 text-right"></div>
+        <div id="tableView" class="hidden overflow-x-auto pb-24">
+            <table class="w-full border-separate border-spacing-y-3"><tbody id="tableBody"></tbody></table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAxGd0JSGNlVMBzPBN5gojbMuLht828OdU",
+            authDomain: "mocha-resto.firebaseapp.com",
+            projectId: "mocha-resto",
+            storageBucket: "mocha-resto.appspot.com",
+            messagingSenderId: "542360253487",
+            appId: "1:542360253487:web:7a8100171966957a069e2b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let allMembers = [];
+        let currentView = 'card';
+        let currentFilter = 'all';
+
+        // دالة الواتساب "المنظفة": تفحص الرقم مهما كانت المقدمة المسجلة (972 أو 970)
+        function buildWaUrl(phone, name, type = 'welcome') {
+            // 1. تنظيف الرقم من أي شيء ليس رقماً
+            let raw = phone?.toString().replace(/\D/g, '') || '';
+            let cleanNumber = raw;
+
+            // 2. إذا كان الرقم مسجلاً بمقدمة 970 أو 972، نحذفها لنصل لجوهر الرقم (05x)
+            if (raw.startsWith('970')) {
+                cleanNumber = '0' + raw.substring(3);
+            } else if (raw.startsWith('972')) {
+                cleanNumber = '0' + raw.substring(3);
+            } else if (raw.startsWith('00970')) {
+                cleanNumber = '0' + raw.substring(5);
+            } else if (raw.startsWith('00972')) {
+                cleanNumber = '0' + raw.substring(5);
+            } 
+            // إذا لم يكن هناك مقدمة وبدأ بـ 5 مباشرة (بدون الصفر)
+            else if (raw.startsWith('5') && raw.length === 9) {
+                cleanNumber = '0' + raw;
+            }
+
+            let finalPhone = cleanNumber;
+
+            // 3. الآن نعيد بناء المقدمة بناءً على "هوية الرقم" الفعلية (الرقم الثالث)
+            if (cleanNumber.startsWith('059') || cleanNumber.startsWith('056')) {
+                finalPhone = '970' + cleanNumber.substring(1); // جوال وأوريدو
+            } else if (cleanNumber.startsWith('050') || cleanNumber.startsWith('052') || cleanNumber.startsWith('054') || cleanNumber.startsWith('055') || cleanNumber.startsWith('058') || cleanNumber.startsWith('053')) {
+                finalPhone = '972' + cleanNumber.substring(1); // شركات أخرى
+            } else if (cleanNumber.startsWith('05')) {
+                finalPhone = '970' + cleanNumber.substring(1); // افتراضي فلسطين
+            }
+
+            let msg = type === 'welcome' ? `أهلاً ${name}! ✨ نورتنا اليوم في موكا..` : 
+                      type === 'feedback' ? `أهلاً ${name}.. رأيك يهمنا، يمكنك تقييمنا هنا: https://search.google.com/local/writereview?placeid=ChIJL_brEMoqHRURkDsv6pNtnYM` :
+                      `كل عام وأنت بخير يا ${name}! 🎂 عائلة موكا تتمنى لك سنة سعيدة..`;
+            
+            return `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(msg)}`;
+        }
+        window.buildWaUrl = buildWaUrl;
+
+        function isToday(dob) {
+            if(!dob) return false;
+            const parts = dob.toString().split('/');
+            if(parts.length < 2) return false;
+            const t = new Date();
+            return parseInt(parts[0]) === t.getDate() && parseInt(parts[1]) === (t.getMonth() + 1);
+        }
+
+        function listenToData() {
+            const q = query(collection(db, "customers"), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                allMembers = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        name: data.name || '',
+                        phone: data.phone || '',
+                        dob: data.dob || '',
+                        visits: data.visits || 1,
+                        date: data.createdAt ? data.createdAt.toDate().toLocaleDateString('en-GB') : '',
+                        rawDate: data.createdAt ? data.createdAt.toDate() : new Date(0)
+                    };
+                });
+                renderUI();
+                updateVisualAnalytics();
+            });
+        }
+
+        window.renderUI = function(data = null) {
+            const list = data || allMembers;
+            const bdays = allMembers.filter(m => isToday(m.dob));
+            const todayStr = new Date().toLocaleDateString('en-GB');
+
+            document.getElementById('statTotal').innerText = allMembers.length;
+            document.getElementById('statTotalVisits').innerText = allMembers.reduce((sum, m) => sum + m.visits, 0);
+            document.getElementById('statBirthdays').innerText = bdays.length;
+            document.getElementById('statNewToday').innerText = allMembers.filter(m => m.date === todayStr).length;
+
+            const bSect = document.getElementById('birthdaySection');
+            if(bdays.length > 0 && !data) {
+                bSect.classList.remove('hidden');
+                document.getElementById('birthdayGrid').innerHTML = bdays.map(m => createCard(m, true)).join('');
+            } else if(!data) bSect.classList.add('hidden');
+
+            const container = currentView === 'card' ? document.getElementById('cardView') : document.getElementById('tableBody');
+            container.innerHTML = list.map(m => currentView === 'card' ? createCard(m) : createTableRow(m)).join('');
+        };
+
+        function createCard(m, forceBday = false) {
+            const bday = forceBday || isToday(m.dob);
+            return `<div class="glass-card ${bday?'is-birthday-card':''}">
+                ${bday?'<div class="birthday-ribbon">👑 نجم اليوم</div>':''}
+                <div class="mb-4 ${bday?'mt-6':''}">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-black text-sm ${bday?'text-gold':'text-mocha-cream'} truncate">${m.name}</h3>
+                        <span class="visit-badge">x${m.visits}</span>
+                    </div>
+                    <p class="text-[10px] opacity-30 font-mono mt-1">${m.phone}</p>
+                </div>
+                <div class="flex justify-between items-center text-[8px] opacity-20 mb-4 font-bold">
+                    <span>🎂 ${m.dob||'--/--'}</span>
+                    <span>🕒 ${m.date}</span>
+                </div>
+                <div class="flex flex-col gap-2 mt-auto">
+                    <a href="${buildWaUrl(m.phone, m.name, bday?'birthday':'welcome')}" target="_blank" class="wa-btn ${bday?'wa-btn-gold':''}"><span>${bday?'🎈 تهنئة':'📱 ترحيب'}</span></a>
+                    <a href="${buildWaUrl(m.phone, m.name, 'feedback')}" target="_blank" class="quick-action-btn">طلب تقييم ⭐</a>
+                </div>
+            </div>`;
+        }
+
+        function createTableRow(m) {
+            return `<tr><td class="p-4 bg-white/5 rounded-r-3xl font-bold">${m.name} <span class="text-gold text-[10px] mr-2">(x${m.visits})</span></td><td class="p-4 bg-white/5 text-xs opacity-40 font-mono">${m.phone}</td><td class="p-4 bg-white/5 rounded-l-3xl text-left"><a href="${buildWaUrl(m.phone,m.name)}" target="_blank" class="wa-btn px-4 text-[10px]">مراسلة</a></td></tr>`;
+        }
+
+        window.filterData = function() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const todayStr = new Date().toLocaleDateString('en-GB');
+            let res = [...allMembers].filter(m => {
+                const s = m.name.toLowerCase().includes(q) || m.phone.includes(q);
+                let f = true;
+                if(currentFilter==='new') f = m.date === todayStr;
+                else if(currentFilter==='bday') f = isToday(m.dob);
+                return s && f;
+            });
+            if(currentFilter === 'top') res.sort((a, b) => b.visits - a.visits);
+            renderUI(res);
+        };
+
+        window.applySmartFilter = function(t) {
+            currentFilter = t;
+            document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+            document.getElementById({all:'filterAll', new:'filterNew', bday:'filterBday', top:'filterTop'}[t]).classList.add('active');
+            filterData();
+        };
+
+        window.switchView = function(v) {
+            currentView = v;
+            document.getElementById('btnCard').classList.toggle('active', v==='card');
+            document.getElementById('btnTable').classList.toggle('active', v==='table');
+            document.getElementById('cardView').classList.toggle('hidden', v==='table');
+            document.getElementById('tableView').classList.toggle('hidden', v==='card');
+            renderUI();
+        };
+
+        window.exportToExcel = function() {
+            const ws = XLSX.utils.json_to_sheet(allMembers.map(m => ({"الاسم": m.name, "الهاتف": m.phone, "الميلاد": m.dob, "الزيارات": m.visits})));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Customers");
+            XLSX.writeFile(wb, "Mocha_Data.xlsx");
+        };
+
+        function updateVisualAnalytics() {
+            if(!allMembers.length) return;
+            let u20 = 0, mid = 0, o35 = 0;
+            const cy = new Date().getFullYear();
+            allMembers.forEach(m => {
+                const yr = m.dob?.match(/\d{4}/);
+                if(yr) {
+                    const age = cy - parseInt(yr[0]);
+                    if(age < 20) u20++; else if(age <= 35) mid++; else o35++;
+                }
+            });
+            const t = allMembers.length;
+            const bar = (id, c) => {
+                const p = Math.round((c/t)*100)||0;
+                document.getElementById(id+'_val').innerText = p+'%';
+                document.getElementById(id+'_bar').style.width = p+'%';
+            };
+            bar('age1',u20); bar('age2',mid); bar('age3',o35);
+        }
+
+        window.cleanDuplicates = async () => {
+            if (!confirm("سيتم حذف السجلات المكررة والاحتفاظ بنسخة واحدة. استمرار؟")) return;
+            const phoneMap = new Map();
+            const deletePromises = [];
+            const sorted = [...allMembers].sort((a, b) => b.rawDate - a.rawDate);
+            sorted.forEach(member => {
+                if (phoneMap.has(member.phone)) deletePromises.push(deleteDoc(doc(db, "customers", member.id)));
+                else phoneMap.set(member.phone, true);
+            });
+            await Promise.all(deletePromises);
+            alert("تم التنظيف بنجاح!");
+        };
+
+        listenToData();
+    </script>
+</body>
+</html>

@@ -28,7 +28,6 @@
         .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 2rem; position: relative; }
         .progress-fill { height: 100%; background: var(--mocha-cream); width: 50%; transition: 0.5s; border-radius: 2px; box-shadow: 0 0 10px var(--mocha-cream); }
         
-        /* التنبيه المنبثق العصري */
         #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: white; color: var(--mocha-burgundy); padding: 1rem 2rem; border-radius: 2rem; font-weight: bold; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 10001; opacity: 0; text-align: center; min-width: 250px; }
         #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
     </style>
@@ -89,6 +88,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // إعدادات Firebase الخاصة بك
         const firebaseConfig = {
             apiKey: "AIzaSyAxGd0JSGNlVMBzPBN5gojbMuLht828OdU",
             authDomain: "mocha-resto.firebaseapp.com",
@@ -102,6 +102,7 @@
         const db = getFirestore(app);
         const d = document;
 
+        // دوال التحكم بالمدخلات والتنسيق
         window.handlePhone = (i) => { 
             i.value = i.value.replace(/[^0-9]/g, ''); 
             if (!i.value.startsWith('05')) i.value = '05' + i.value.replace(/^0+/, ''); 
@@ -138,6 +139,7 @@
             if(msg) msg.classList.remove('visible');
         };
 
+        // الميزة الجديدة: التحقق من الزبون قبل الانتقال للخطوة التالية
         window.checkUser = async () => {
             const name = d.getElementById('name').value.trim();
             const phone = d.getElementById('phone').value;
@@ -156,16 +158,15 @@
                 const querySnapshot = await getDocs(q);
 
                 if (!querySnapshot.empty) {
-                    // زبون موجود - تحديث الزيارات
+                    // الزبون موجود مسبقاً -> تحديث عدد الزيارات فقط
                     const userDoc = querySnapshot.docs[0];
                     await updateDoc(doc(db, "customers", userDoc.id), {
                         visits: increment(1),
                         lastVisit: serverTimestamp()
                     });
 
-                    // عرض رسالة لطيفة قبل النقل
                     const toast = d.getElementById('toast');
-                    toast.innerText = `أهلاً بك مجدداً يا ${userDoc.data().name}.. اشتقنا لك! ✨`;
+                    toast.innerText = `أهلاً بك مجدداً يا ${userDoc.data().name}.. نورتنا! ✨`;
                     toast.classList.add('show');
                     
                     setTimeout(() => {
@@ -175,7 +176,7 @@
                     }, 1800);
 
                 } else {
-                    // زبون جديد - الانتقال للخطوة التالية
+                    // زبون جديد -> الانتقال لجمع تاريخ الميلاد
                     d.getElementById('step1').classList.remove('step-active');
                     d.getElementById('step2').classList.add('step-active');
                     d.getElementById('progress').style.width = '100%';
@@ -195,8 +196,8 @@
             d.getElementById('progress').style.width = '50%';
         };
 
+        // حفظ بيانات الزبون الجديد بشكل نهائي
         window.submitFinal = async () => {
-            const phoneVal = d.getElementById('phone').value;
             const day = d.getElementById('day').value;
             const month = d.getElementById('month').value;
             const year = d.getElementById('year').value;
@@ -213,9 +214,9 @@
             try {
                 await addDoc(collection(db, "customers"), {
                     name: d.getElementById('name').value,
-                    phone: phoneVal,
+                    phone: d.getElementById('phone').value,
                     dob: `${day.padStart(2,'0')}/${month.padStart(2,'0')}/${year}`,
-                    visits: 1, // الزيارة الأولى
+                    visits: 1,
                     createdAt: serverTimestamp(),
                     lastVisit: serverTimestamp()
                 });

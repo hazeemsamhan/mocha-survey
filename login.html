@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دخول الإدارة | Mocha Resto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --mocha-burgundy: #630634; --mocha-cream: #EAE7DD; --gold: #FFD700; }
+        body { background-color: var(--mocha-burgundy); font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        
+        /* الخلفية وتأثير البخار */
+        .coffee-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle, #b12c6a 0%, #630634 70%); }
+        .steam { position: absolute; height: 150px; width: 150px; border-radius: 50%; background: white; filter: blur(50px); opacity: 0; animation: steam 8s infinite; z-index: -1; }
+        @keyframes steam {
+            0% { transform: translateY(100vh) scale(1); opacity: 0; }
+            50% { opacity: 0.15; }
+            100% { transform: translateY(-100px) scale(2); opacity: 0; }
+        }
+
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 3rem; box-shadow: 0 40px 100px rgba(0,0,0,0.4); width: 100%; max-width: 400px; padding: 3rem 2rem; position: relative; z-index: 10; }
+        
+        .input-field { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem; padding: 1.2rem; width: 100%; outline: none; transition: 0.4s; color: white; text-align: center; font-size: 1rem; }
+        .input-field:focus { border-color: var(--gold); background: rgba(255, 255, 255, 0.12); }
+        
+        .show-password { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.3); font-size: 1.2rem; transition: 0.3s; }
+        .show-password:hover { color: var(--gold); }
+
+        .mocha-btn { background: var(--mocha-cream); color: var(--mocha-burgundy); font-weight: 900; padding: 1.2rem; border-radius: 1.5rem; width: 100%; transition: 0.4s; cursor: pointer; margin-top: 1rem; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; }
+        .mocha-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(0,0,0,0.3); background: white; }
+        .mocha-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .error-msg { color: #ff4d4d; font-size: 0.8rem; text-align: center; margin-top: 1rem; display: none; background: rgba(255, 77, 77, 0.1); padding: 10px; border-radius: 1rem; }
+        
+        .loader { width: 20px; height: 20px; border: 3px solid var(--mocha-burgundy); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="steam" style="left: 10%; animation-delay: 0s;"></div>
+    <div class="steam" style="left: 40%; animation-delay: 2s;"></div>
+    <div class="steam" style="left: 80%; animation-delay: 4s;"></div>
+    
+    <div class="coffee-bg"></div>
+
+    <div class="glass">
+        <div class="text-center mb-10">
+            <h1 style="color: var(--mocha-cream); font-size: 3rem; font-weight: 900; letter-spacing: -2px; line-height: 0.8;">mocha</h1>
+            <p style="color: var(--gold); font-size: 0.6rem; letter-spacing: 4px; opacity: 0.8; margin-top: 10px; font-weight: bold; text-transform: uppercase;">Admin Portal</p>
+        </div>
+
+        <div class="space-y-4">
+            <input type="text" id="username" placeholder="اسم المستخدم" class="input-field">
+            
+            <div class="relative">
+                <input type="password" id="password" placeholder="كلمة المرور" class="input-field">
+                <span class="show-password" id="toggleIcon" onclick="togglePass()">👁️</span>
+            </div>
+            
+            <div class="flex items-center gap-2 px-2">
+                <input type="checkbox" id="rememberMe" class="accent-gold w-4 h-4">
+                <label for="rememberMe" class="text-white/50 text-xs cursor-pointer">تذكرني على هذا الجهاز</label>
+            </div>
+
+            <button id="loginBtn" onclick="handleLogin()" class="mocha-btn">
+                <div id="btnLoader" class="loader hidden"></div>
+                <span id="btnText">دخول</span>
+            </button>
+        </div>
+
+        <div id="errorMsg" class="error-msg">❌ خطأ في اسم المستخدم أو كلمة المرور</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAxGd0JSGNlVMBzPBN5gojbMuLht828OdU",
+            authDomain: "mocha-resto.firebaseapp.com",
+            projectId: "mocha-resto",
+            storageBucket: "mocha-resto.appspot.com",
+            messagingSenderId: "542360253487",
+            appId: "1:542360253487:web:7a8100171966957a069e2b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // إظهار وإخفاء كلمة المرور
+        window.togglePass = () => {
+            const p = document.getElementById('password');
+            const icon = document.getElementById('toggleIcon');
+            if (p.type === 'password') {
+                p.type = 'text';
+                icon.innerText = '🔒';
+            } else {
+                p.type = 'password';
+                icon.innerText = '👁️';
+            }
+        };
+
+        window.handleLogin = async () => {
+            const userField = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            const errorMsg = document.getElementById('errorMsg');
+            const btn = document.getElementById('loginBtn');
+            const btnText = document.getElementById('btnText');
+            const btnLoader = document.getElementById('btnLoader');
+
+            if(!userField || !password) return;
+
+            // تحويل اسم المستخدم لإيميل وهمي
+            const email = `${userField}@mocha.com`;
+
+            errorMsg.style.display = 'none';
+            btn.disabled = true;
+            btnText.innerText = "جاري التحقق...";
+            btnLoader.classList.remove('hidden');
+
+            try {
+                // ضبط مدة الجلسة
+                const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+                await setPersistence(auth, persistence);
+                
+                // تسجيل الدخول في Firebase
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                
+                // --- نظام سجل الدخول (Access Logs) ---
+                try {
+                    await addDoc(collection(db, "admin_logs"), {
+                        admin_user: userField,
+                        login_time: serverTimestamp(),
+                        device: navigator.userAgent,
+                        status: "Success"
+                    });
+                } catch (logError) {
+                    console.error("Log failed", logError);
+                }
+
+                // حفظ الحالة للتوافق مع admin.html
+                sessionStorage.setItem("isLoggedIn", "true");
+                if(rememberMe) localStorage.setItem("isLoggedIn", "true");
+
+                window.location.href = "admin.html";
+            } catch (error) {
+                console.error("Login Error:", error.code);
+                errorMsg.style.display = 'block';
+                btn.disabled = false;
+                btnText.innerText = "دخول";
+                btnLoader.classList.add('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
